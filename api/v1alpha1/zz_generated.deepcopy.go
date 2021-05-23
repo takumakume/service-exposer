@@ -21,7 +21,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"k8s.io/api/extensions/v1beta1"
+	"k8s.io/api/networking/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -89,8 +89,13 @@ func (in *ServiceExposeSpec) DeepCopyInto(out *ServiceExposeSpec) {
 	*out = *in
 	if in.Backend != nil {
 		in, out := &in.Backend, &out.Backend
-		*out = new(v1beta1.IngressBackend)
+		*out = new(v1.IngressBackend)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.PathType != nil {
+		in, out := &in.PathType, &out.PathType
+		*out = new(v1.PathType)
+		**out = **in
 	}
 	if in.Annotations != nil {
 		in, out := &in.Annotations, &out.Annotations

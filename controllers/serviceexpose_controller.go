@@ -18,15 +18,19 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	"github.com/juju/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	serviceexposerv1alpha1 "github.com/takumakume/service-exposer/api/v1alpha1"
+	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const serviceExposeFinalizer = "service-exposer.github.io/finalizer"
@@ -104,6 +108,84 @@ func (r *ServiceExposeReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 
 		return ctrl.Result{}, nil
+	}
+
+	if exp.Spec.Backend.Service.Name != "" && exp.Spec.Backend.Resource.Name != "" {
+		return ctrl.Result{}, errors.New("Either Spec.Backend.Service and Spec.Backend.Resource")
+	}
+
+	ingressName := ""
+	if exp.Spec.Backend.Service.Name != "" && exp.Spec.Backend.Resource.Name != "" {
+		return ctrl.Result{}, errors.New("Either Spec.Backend.Service and Spec.Backend.Resource")
+	} else if exp.Spec.Backend.Service.Name != "" {
+		ingressName = exp.Spec.Backend.Service.Name
+	} else if exp.Spec.Backend.Resource.Name != "" {
+		ingressName = exp.Spec.Backend.Resource.Name
+	} else {
+		return ctrl.Result{}, errors.New("Empty Spec.Backend.Service and Spec.Backend.Resource")
+	}
+
+	// create ingress if not exists
+	found := &networkingv1.Ingress{}
+	err = r.Get(ctx, types.NamespacedName{Name: ingressName, Namespace: exp.Namespace}, found)
+	if err != nil && errors.IsNotFound(err) {
+		ing := &networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      ingressName,
+				Namespace: exp.Namespace,
+			},
+			Spec: networkingv1.IngressSpec{},
+		}
+
+		_ = ctrl.SetControllerReference(exp, ing, r.Scheme)
+
+		//log.Info("Creating a new Ingress", "Ingress.Namespace", ing.Namespace, "Ingress.Name", ing.Name)
+		err = r.Create(ctx, ing)
+		if err != nil {
+			//log.Error(err, "Failed to create new Ingress", "Ingress.Namespace", ing.Namespace, "Ingress.Name", ing.Name)
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		//log.Error(err, "Failed to get Ingress")
+		return ctrl.Result{}, err
+	} else if found != nil {
+		// update ingress if diff
+		needUpdate := false
+		if len(found.Spec.Rules) == 1 {
+			if len(found.Spec.Rules[0].HTTP.Paths) == 1 {
+				if !reflect.DeepEqual(found.Spec.Rules[0].HTTP.Paths[0].Backend, exp.Spec.Backend) {
+					needUpdate = true
+				}
+				if found.Spec.Rules[0].HTTP.Paths[0].Path != exp.Spec.Path {
+					needUpdate = true
+				}
+				if found.Spec.Rules[0].HTTP.Paths[0].PathType != exp.Spec.PathType {
+					needUpdate = true
+				}
+			} else {
+				needUpdate = true
+			}
+		} else {
+			needUpdate = true
+		}
+		if (len(found.Spec.TLS) > 0) != exp.Spec.TLSEnabled {
+			needUpdate = true
+		}
+		if exp.Spec.TLSEnabled && len(found.Spec.TLS) > 0 && (found.Spec.TLS[0].SecretName != exp.Spec.TLSSecretName) {
+			needUpdate = true
+		}
+		if !reflect.DeepEqual(found.Annotations, exp.Annotations) {
+			needUpdate = true
+		}
+
+		if needUpdate {
+			//log.Info("Update Ingress", "Ingress.Namespace", found.Namespace, "Ingress.Name", found.Name)
+			// TODO: Update ingress
+		}
+
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	return ctrl.Result{}, nil

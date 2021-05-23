@@ -18,7 +18,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	v1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -33,13 +33,13 @@ type ServiceExposeSpec struct {
 	// Foo is an example field of ServiceExpose. Edit serviceexpose_types.go to remove/update
 	//Foo string `json:"foo,omitempty"`
 
-	Backend       *v1beta1.IngressBackend `json:"backend"`
-	Path          string                  `json:"path,omitempty"`
-	PathType      string                  `json:"path_type,omitempty"`
-	DomainPrefix  string                  `json:"domain_prefix"`
-	TLSEnabled    bool                    `json:"tls_enable,omitempty"`
-	TLSSecretName string                  `json:"tls_secret_name,omitempty"`
-	Annotations   map[string]string       `json:"annotations,omitempty"`
+	Backend       *networkingv1.IngressBackend `json:"backend"`
+	Path          string                       `json:"path,omitempty"`
+	PathType      *networkingv1.PathType       `json:"path_type,omitempty"`
+	DomainPrefix  string                       `json:"domain_prefix"`
+	TLSEnabled    bool                         `json:"tls_enable,omitempty"`
+	TLSSecretName string                       `json:"tls_secret_name,omitempty"`
+	Annotations   map[string]string            `json:"annotations,omitempty"`
 }
 
 // ServiceExposeStatus defines the observed state of ServiceExpose

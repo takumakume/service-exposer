@@ -47,7 +47,8 @@ spec:
                   resource:
                     description: Resource is an ObjectRef to another Kubernetes resource
                       in the namespace of the Ingress object. If resource is specified,
-                      serviceName and servicePort must not be specified.
+                      a service.Name and service.Port must not be specified. This
+                      is a mutually exclusive setting with "Service".
                     properties:
                       apiGroup:
                         description: APIGroup is the group for the resource being
@@ -65,21 +66,40 @@ spec:
                     - kind
                     - name
                     type: object
-                  serviceName:
-                    description: Specifies the name of the referenced service.
-                    type: string
-                  servicePort:
-                    anyOf:
-                    - type: integer
-                    - type: string
-                    description: Specifies the port of the referenced service.
-                    x-kubernetes-int-or-string: true
+                  service:
+                    description: Service references a Service as a Backend. This is
+                      a mutually exclusive setting with "Resource".
+                    properties:
+                      name:
+                        description: Name is the referenced service. The service must
+                          exist in the same namespace as the Ingress object.
+                        type: string
+                      port:
+                        description: Port of the referenced service. A port name or
+                          port number is required for a IngressServiceBackend.
+                        properties:
+                          name:
+                            description: Name is the name of the port on the Service.
+                              This is a mutually exclusive setting with "Number".
+                            type: string
+                          number:
+                            description: Number is the numerical port number (e.g.
+                              80) on the Service. This is a mutually exclusive setting
+                              with "Name".
+                            format: int32
+                            type: integer
+                        type: object
+                    required:
+                    - name
+                    type: object
                 type: object
               domain_prefix:
                 type: string
               path:
                 type: string
               path_type:
+                description: PathType represents the type of path referred to by a
+                  HTTPIngressPath.
                 type: string
               tls_enable:
                 type: boolean
