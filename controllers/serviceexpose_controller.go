@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	"github.com/go-logr/logr"
@@ -57,6 +58,8 @@ type ServiceExposeReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *ServiceExposeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// TODO: test and refactor
+
 	reqLogger := r.Log.WithValues("serviceexpose", req.NamespacedName)
 
 	// your logic here
@@ -125,16 +128,44 @@ func (r *ServiceExposeReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, errors.New("Empty Spec.Backend.Service and Spec.Backend.Resource")
 	}
 
+	ingressHost := fmt.Sprintf("%s.%s.%s", ingressName, exp.Namespace, exp.Spec.DomainPrefix)
+
 	// create ingress if not exists
 	found := &networkingv1.Ingress{}
 	err = r.Get(ctx, types.NamespacedName{Name: ingressName, Namespace: exp.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
 		ing := &networkingv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      ingressName,
-				Namespace: exp.Namespace,
+				Name:        ingressName,
+				Namespace:   exp.Namespace,
+				Annotations: exp.Annotations,
 			},
-			Spec: networkingv1.IngressSpec{},
+			Spec: networkingv1.IngressSpec{
+				// TODO: add ingressClassName
+				Rules: []networkingv1.IngressRule{
+					{
+						Host: ingressHost,
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{
+									{
+										Path:     exp.Spec.Path,
+										PathType: exp.Spec.PathType,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		if exp.Spec.TLSEnabled {
+			ing.Spec.TLS = []networkingv1.IngressTLS{
+				{
+					Hosts:      []string{ingressHost},
+					SecretName: exp.Spec.TLSSecretName,
+				},
+			}
 		}
 
 		_ = ctrl.SetControllerReference(exp, ing, r.Scheme)
@@ -184,6 +215,41 @@ func (r *ServiceExposeReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			//log.Info("Update Ingress", "Ingress.Namespace", found.Namespace, "Ingress.Name", found.Name)
 			// TODO: Update ingress
 		}
+
+		ing := &networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        ingressName,
+				Namespace:   exp.Namespace,
+				Annotations: exp.Annotations,
+			},
+			Spec: networkingv1.IngressSpec{
+				// TODO: add ingressClassName
+				Rules: []networkingv1.IngressRule{
+					{
+						Host: ingressHost,
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{
+									{
+										Path:     exp.Spec.Path,
+										PathType: exp.Spec.PathType,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		if exp.Spec.TLSEnabled {
+			ing.Spec.TLS = []networkingv1.IngressTLS{
+				{
+					Hosts:      []string{ingressHost},
+					SecretName: exp.Spec.TLSSecretName,
+				},
+			}
+		}
+		r.Update(ctx, ing)
 
 		return ctrl.Result{Requeue: true}, nil
 	}
