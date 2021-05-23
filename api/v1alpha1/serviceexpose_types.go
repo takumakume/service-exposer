@@ -36,7 +36,7 @@ type ServiceExposeSpec struct {
 	Backend       *networkingv1.IngressBackend `json:"backend"`
 	Path          string                       `json:"path,omitempty"`
 	PathType      *networkingv1.PathType       `json:"path_type,omitempty"`
-	DomainPrefix  string                       `json:"domain_prefix"`
+	Domain        string                       `json:"domain"`
 	TLSEnabled    bool                         `json:"tls_enable,omitempty"`
 	TLSSecretName string                       `json:"tls_secret_name,omitempty"`
 	Annotations   map[string]string            `json:"annotations,omitempty"`
