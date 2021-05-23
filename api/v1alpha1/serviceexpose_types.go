@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
+	v1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,13 +31,26 @@ type ServiceExposeSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of ServiceExpose. Edit serviceexpose_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	//Foo string `json:"foo,omitempty"`
+
+	Backend       *v1beta1.IngressBackend `json:"backend"`
+	Path          string                  `json:"path,omitempty"`
+	PathType      string                  `json:"path_type,omitempty"`
+	DomainPrefix  string                  `json:"domain_prefix"`
+	TLSEnabled    bool                    `json:"tls_enable,omitempty"`
+	TLSSecretName string                  `json:"tls_secret_name,omitempty"`
+	Annotations   map[string]string       `json:"annotations,omitempty"`
 }
 
 // ServiceExposeStatus defines the observed state of ServiceExpose
 type ServiceExposeStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	IngressName string                 `json:"ingress_name,omitempty"`
+	IngressHost string                 `json:"ingress_host,omitempty"`
+	Revision    string                 `json:"revision"`
+	Ready       corev1.ConditionStatus `json:"ready"`
 }
 
 //+kubebuilder:object:root=true
