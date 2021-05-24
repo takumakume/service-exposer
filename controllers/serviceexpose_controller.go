@@ -46,7 +46,7 @@ type ServiceExposeReconciler struct {
 //+kubebuilder:rbac:groups=service-exposer.takumakume.github.io,resources=serviceexposes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=service-exposer.takumakume.github.io,resources=serviceexposes/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=service-exposer.takumakume.github.io,resources=serviceexposes/finalizers,verbs=update
-//+kubebuilder:rbac:groups=networking.k8s.io/v1,resources=ingress,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.k8s.io/v1,resources=ingress;ingresses,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
