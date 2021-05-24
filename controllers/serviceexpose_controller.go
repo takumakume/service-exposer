@@ -128,7 +128,7 @@ func (r *ServiceExposeReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, errors.New("Empty Spec.Backend.Service and Spec.Backend.Resource")
 	}
 
-	ingressHost := fmt.Sprintf("%s.%s.%s", ingressName, exp.Namespace, exp.Spec.DomainPrefix)
+	ingressHost := fmt.Sprintf("%s.%s.%s", ingressName, exp.Namespace, exp.Spec.Domain)
 
 	// create ingress if not exists
 	found := &networkingv1.Ingress{}

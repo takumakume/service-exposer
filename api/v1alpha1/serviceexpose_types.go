@@ -33,13 +33,37 @@ type ServiceExposeSpec struct {
 	// Foo is an example field of ServiceExpose. Edit serviceexpose_types.go to remove/update
 	//Foo string `json:"foo,omitempty"`
 
-	Backend       *networkingv1.IngressBackend `json:"backend"`
-	Path          string                       `json:"path,omitempty"`
-	PathType      *networkingv1.PathType       `json:"path_type,omitempty"`
-	Domain        string                       `json:"domain"`
-	TLSEnabled    bool                         `json:"tls_enable,omitempty"`
-	TLSSecretName string                       `json:"tls_secret_name,omitempty"`
-	Annotations   map[string]string            `json:"annotations,omitempty"`
+	// TODO:
+	//   more comment
+	//   defaulting
+
+	// Backend
+	// +kubebuiler:validation:Required
+	Backend *networkingv1.IngressBackend `json:"backend"`
+
+	// Path
+	// +optional
+	Path string `json:"path,omitempty"`
+
+	// PathType
+	// +optional
+	PathType *networkingv1.PathType `json:"path_type,omitempty"`
+
+	// Domain
+	// +kubebuiler:validation:Required
+	Domain string `json:"domain"`
+
+	// TLSEnabled
+	// +optional
+	TLSEnabled bool `json:"tls_enable,omitempty"`
+
+	// TLSSecretName
+	// +optional
+	TLSSecretName string `json:"tls_secret_name,omitempty"`
+
+	// Annotations
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // ServiceExposeStatus defines the observed state of ServiceExpose

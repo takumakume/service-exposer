@@ -39,10 +39,10 @@ spec:
               annotations:
                 additionalProperties:
                   type: string
+                description: Annotations
                 type: object
               backend:
-                description: IngressBackend describes all endpoints for a given service
-                  and port.
+                description: Backend
                 properties:
                   resource:
                     description: Resource is an ObjectRef to another Kubernetes resource
@@ -93,21 +93,24 @@ spec:
                     - name
                     type: object
                 type: object
-              domain_prefix:
+              domain:
+                description: Domain
                 type: string
               path:
+                description: Path
                 type: string
               path_type:
-                description: PathType represents the type of path referred to by a
-                  HTTPIngressPath.
+                description: PathType
                 type: string
               tls_enable:
+                description: TLSEnabled
                 type: boolean
               tls_secret_name:
+                description: TLSSecretName
                 type: string
             required:
             - backend
-            - domain_prefix
+            - domain
             type: object
           status:
             description: ServiceExposeStatus defines the observed state of ServiceExpose
