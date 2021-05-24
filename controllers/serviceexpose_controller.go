@@ -113,27 +113,36 @@ func (r *ServiceExposeReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
-	if exp.Spec.Backend.Service.Name != "" && exp.Spec.Backend.Resource.Name != "" {
-		return ctrl.Result{}, errors.New("Either Spec.Backend.Service and Spec.Backend.Resource")
+	// TODO: defaulting
+	if exp.Spec.PathType == "" {
+		exp.Spec.PathType = networkingv1.PathType(networkingv1.PathTypeImplementationSpecific)
 	}
 
-	ingressName := ""
-	if exp.Spec.Backend.Service.Name != "" && exp.Spec.Backend.Resource.Name != "" {
-		return ctrl.Result{}, errors.New("Either Spec.Backend.Service and Spec.Backend.Resource")
-	} else if exp.Spec.Backend.Service.Name != "" {
-		ingressName = exp.Spec.Backend.Service.Name
-	} else if exp.Spec.Backend.Resource.Name != "" {
-		ingressName = exp.Spec.Backend.Resource.Name
-	} else {
-		return ctrl.Result{}, errors.New("Empty Spec.Backend.Service and Spec.Backend.Resource")
-	}
+	// if exp.Spec.Backend.Service.Name != "" && exp.Spec.Backend.Resource.Name != "" {
+	// 	return ctrl.Result{}, errors.New("Either Spec.Backend.Service and Spec.Backend.Resource")
+	// }
+
+	// ingressName := ""
+	// if exp.Spec.Backend.Service.Name != "" && exp.Spec.Backend.Resource.Name != "" {
+	// 	return ctrl.Result{}, errors.New("Either Spec.Backend.Service and Spec.Backend.Resource")
+	// } else if exp.Spec.Backend.Service.Name != "" {
+	// 	ingressName = exp.Spec.Backend.Service.Name
+	// } else if exp.Spec.Backend.Resource.Name != "" {
+	// 	ingressName = exp.Spec.Backend.Resource.Name
+	// } else {
+	// 	return ctrl.Result{}, errors.New("Empty Spec.Backend.Service and Spec.Backend.Resource")
+	// }
+
+	ingressName := exp.Spec.Backend.Service.Name
+	reqLogger.Info(fmt.Sprintf("ingressName: %s", ingressName))
 
 	ingressHost := fmt.Sprintf("%s.%s.%s", ingressName, exp.Namespace, exp.Spec.Domain)
+	reqLogger.Info(fmt.Sprintf("ingressHost: %s", ingressHost))
 
 	// create ingress if not exists
 	found := &networkingv1.Ingress{}
 	err = r.Get(ctx, types.NamespacedName{Name: ingressName, Namespace: exp.Namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil { // && errors.IsNotFound(err) {
 		ing := &networkingv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        ingressName,
@@ -150,7 +159,8 @@ func (r *ServiceExposeReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 								Paths: []networkingv1.HTTPIngressPath{
 									{
 										Path:     exp.Spec.Path,
-										PathType: exp.Spec.PathType,
+										PathType: &exp.Spec.PathType,
+										Backend:  exp.Spec.Backend,
 									},
 								},
 							},
@@ -170,19 +180,21 @@ func (r *ServiceExposeReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 		_ = ctrl.SetControllerReference(exp, ing, r.Scheme)
 
-		//log.Info("Creating a new Ingress", "Ingress.Namespace", ing.Namespace, "Ingress.Name", ing.Name)
+		reqLogger.Info("Creating a new Ingress")
 		err = r.Create(ctx, ing)
 		if err != nil {
 			//log.Error(err, "Failed to create new Ingress", "Ingress.Namespace", ing.Namespace, "Ingress.Name", ing.Name)
+			reqLogger.Error(err, "Fail to create ingress")
 			return ctrl.Result{}, err
 		}
 
 		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		//log.Error(err, "Failed to get Ingress")
-		return ctrl.Result{}, err
+		// } else if err != nil {
+		// 	reqLogger.Error(err, "Fail to get ingress")
+		// 	return ctrl.Result{}, err
 	} else if found != nil {
 		// update ingress if diff
+		reqLogger.Info("Found Ingress")
 		needUpdate := false
 		if len(found.Spec.Rules) == 1 {
 			if len(found.Spec.Rules[0].HTTP.Paths) == 1 {
@@ -192,7 +204,7 @@ func (r *ServiceExposeReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				if found.Spec.Rules[0].HTTP.Paths[0].Path != exp.Spec.Path {
 					needUpdate = true
 				}
-				if found.Spec.Rules[0].HTTP.Paths[0].PathType != exp.Spec.PathType {
+				if *found.Spec.Rules[0].HTTP.Paths[0].PathType != exp.Spec.PathType {
 					needUpdate = true
 				}
 			} else {
@@ -214,44 +226,48 @@ func (r *ServiceExposeReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if needUpdate {
 			//log.Info("Update Ingress", "Ingress.Namespace", found.Namespace, "Ingress.Name", found.Name)
 			// TODO: Update ingress
-		}
+			reqLogger.Info("Updating Ingress")
 
-		ing := &networkingv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        ingressName,
-				Namespace:   exp.Namespace,
-				Annotations: exp.Annotations,
-			},
-			Spec: networkingv1.IngressSpec{
-				// TODO: add ingressClassName
-				Rules: []networkingv1.IngressRule{
-					{
-						Host: ingressHost,
-						IngressRuleValue: networkingv1.IngressRuleValue{
-							HTTP: &networkingv1.HTTPIngressRuleValue{
-								Paths: []networkingv1.HTTPIngressPath{
-									{
-										Path:     exp.Spec.Path,
-										PathType: exp.Spec.PathType,
+			ing := &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        ingressName,
+					Namespace:   exp.Namespace,
+					Annotations: exp.Annotations,
+				},
+				Spec: networkingv1.IngressSpec{
+					// TODO: add ingressClassName
+					Rules: []networkingv1.IngressRule{
+						{
+							Host: ingressHost,
+							IngressRuleValue: networkingv1.IngressRuleValue{
+								HTTP: &networkingv1.HTTPIngressRuleValue{
+									Paths: []networkingv1.HTTPIngressPath{
+										{
+											Path:     exp.Spec.Path,
+											PathType: &exp.Spec.PathType,
+										},
 									},
 								},
 							},
 						},
 					},
 				},
-			},
-		}
-		if exp.Spec.TLSEnabled {
-			ing.Spec.TLS = []networkingv1.IngressTLS{
-				{
-					Hosts:      []string{ingressHost},
-					SecretName: exp.Spec.TLSSecretName,
-				},
 			}
-		}
-		r.Update(ctx, ing)
+			if exp.Spec.TLSEnabled {
+				ing.Spec.TLS = []networkingv1.IngressTLS{
+					{
+						Hosts:      []string{ingressHost},
+						SecretName: exp.Spec.TLSSecretName,
+					},
+				}
+			}
+			r.Update(ctx, ing)
 
-		return ctrl.Result{Requeue: true}, nil
+			reqLogger.Info("Updated Ingress")
+
+			return ctrl.Result{Requeue: true}, nil
+		}
+
 	}
 
 	return ctrl.Result{}, nil
