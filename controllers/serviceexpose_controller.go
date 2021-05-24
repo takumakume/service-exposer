@@ -264,10 +264,10 @@ func (r *ServiceExposeReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			r.Update(ctx, ing)
 
 			reqLogger.Info("Updated Ingress")
-
-			return ctrl.Result{Requeue: true}, nil
 		}
 
+		reqLogger.Info("Requeue")
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	return ctrl.Result{}, nil
