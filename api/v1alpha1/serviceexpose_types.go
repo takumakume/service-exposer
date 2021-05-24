@@ -39,7 +39,7 @@ type ServiceExposeSpec struct {
 
 	// Backend
 	// +kubebuiler:validation:Required
-	Backend *networkingv1.IngressBackend `json:"backend"`
+	Backend networkingv1.IngressBackend `json:"backend"`
 
 	// Path
 	// +kubebuiler:validation:Required
@@ -47,7 +47,7 @@ type ServiceExposeSpec struct {
 
 	// PathType
 	// +optional
-	PathType *networkingv1.PathType `json:"path_type,omitempty"`
+	PathType networkingv1.PathType `json:"path_type,omitempty"`
 
 	// Domain
 	// +kubebuiler:validation:Required
